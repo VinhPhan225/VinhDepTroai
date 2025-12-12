@@ -23,7 +23,7 @@ const getFavoritesKey = () => {
 function toggleDarkMode() {
   const isDarkMode = document.body.classList.toggle("dark-mode");
   localStorage.setItem("darkMode", isDarkMode ? "enabled" : "disabled");
-  loadLanguage(localStorage.getItem("language") || "vi"); // Cập nhật lại text sau khi chuyển mode
+  loadLanguage(localStorage.getItem("language") || "vi");
 }
 
 function loadDarkMode() {
@@ -40,11 +40,12 @@ function loadDarkMode() {
 }
 
 // =================================================================
-// CHỨC NĂNG NÂNG CAO: MULTI-LANGUAGE
+// CHỨC NĂNG NÂNG CAO: MULTI-LANGUAGE VÀ ĐỊNH DẠNG TIỀN TỆ VND
 // =================================================================
 
 const LANGUAGES = {
   vi: {
+    // ... (Giữ nguyên các chuỗi ngôn ngữ Tiếng Việt)
     "page-title": "Quản Lý Tour Du Lịch",
     "dark-mode-label": "Chế độ tối",
     "auth-login": "Đăng nhập / Đăng ký",
@@ -62,7 +63,7 @@ const LANGUAGES = {
     "btn-save-tour": "Lưu Tour",
     "label-title": "Tên Tour:",
     "label-destination": "Địa điểm:",
-    "label-price": "Giá (USD):",
+    "label-price": "Giá:", // Sửa: Bỏ (USD)
     "label-duration": "Thời lượng:",
     "label-description": "Mô tả:",
     authModalLabel: "Đăng nhập / Đăng ký",
@@ -89,6 +90,7 @@ const LANGUAGES = {
     "btn-edit": "Sửa",
     "btn-delete": "Xóa",
     "btn-unfav": "Hủy yêu thích",
+    price_unit: "VND", // Sửa: Đơn vị tiền tệ
   },
   en: {
     "page-title": "Travel Tour Management",
@@ -107,7 +109,7 @@ const LANGUAGES = {
     "btn-save-tour": "Save Tour",
     "label-title": "Tour Name:",
     "label-destination": "Destination:",
-    "label-price": "Price (USD):",
+    "label-price": "Price:", // Sửa: Bỏ (USD)
     "label-duration": "Duration:",
     "label-description": "Description:",
     authModalLabel: "Login / Register",
@@ -135,7 +137,21 @@ const LANGUAGES = {
     "btn-edit": "Edit",
     "btn-delete": "Delete",
     "btn-unfav": "Unfavorite",
+    price_unit: "VND", // Sửa: Đơn vị tiền tệ
   },
+};
+
+// Hàm định dạng giá tiền sang VND
+const formatCurrency = (price) => {
+  if (typeof price !== "number" || isNaN(price)) {
+    return "N/A";
+  }
+  // Sử dụng Intl.NumberFormat để định dạng theo chuẩn Việt Nam
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    minimumFractionDigits: 0,
+  }).format(price);
 };
 
 function loadLanguage(lang) {
@@ -163,6 +179,7 @@ function loadLanguage(lang) {
   document.getElementById("label-title").innerText = strings["label-title"];
   document.getElementById("label-destination").innerText =
     strings["label-destination"];
+  // SỬA ĐỔI: Thay đổi nhãn Giá
   document.getElementById("label-price").innerText = strings["label-price"];
   document.getElementById("label-duration").innerText =
     strings["label-duration"];
@@ -198,7 +215,7 @@ function setLanguage(lang) {
 }
 
 // =================================================================
-// LOGIC AUTHENTICATION VÀ PHÂN QUYỀN (Cập nhật để sử dụng đa ngôn ngữ)
+// LOGIC AUTHENTICATION VÀ PHÂN QUYỀN (Sử dụng đa ngôn ngữ)
 // =================================================================
 
 function checkAuthState() {
@@ -356,7 +373,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Load Dark Mode và Language trước khi kiểm tra Auth
   loadDarkMode();
   const savedLang = localStorage.getItem("language") || "vi";
-  document.getElementById("lang-select").value = savedLang;
+  const langSelect = document.getElementById("lang-select");
+  if (langSelect) langSelect.value = savedLang;
   loadLanguage(savedLang); // Tải ngôn ngữ và gọi checkAuthState
 
   // Gán sự kiện cho các Form
@@ -432,6 +450,9 @@ function renderTours(tours) {
       const isFav = favorites.includes(Number(tour.id));
       const favIconClass = isFav ? "favorite" : "not-favorite";
 
+      // SỬA ĐỔI: Sử dụng hàm formatCurrency
+      const formattedPrice = formatCurrency(tour.price);
+
       const adminControls = IS_ADMIN
         ? `
                     <div class="mt-2 pt-2 border-top">
@@ -459,11 +480,7 @@ function renderTours(tours) {
                             }</p>
                             
                             <div class="d-flex justify-content-between align-items-end mt-auto pt-2">
-                                <span class="tour-price">${
-                                  tour.price
-                                    ? tour.price.toLocaleString()
-                                    : "N/A"
-                                } USD</span>
+                                <span class="tour-price">${formattedPrice}</span>
                                 <span class="badge bg-success">${
                                   tour.duration || "N/A"
                                 }</span>
@@ -493,6 +510,7 @@ async function handleFormSubmit(event) {
   if (!IS_ADMIN) return alert(strings["alert-no-permission"]);
 
   const id = document.getElementById("tour-id").value;
+  // Giả định API chấp nhận số thập phân
   const tourData = {
     title: document.getElementById("title").value,
     destination: document.getElementById("destination").value,
@@ -681,7 +699,6 @@ async function renderFavoriteList() {
     );
 
     if (favoriteTours.length === 0 && favoriteIds.length > 0) {
-      // Trường hợp IDs còn nhưng tour bị xóa khỏi API
       favContainer.innerHTML =
         '<li class="list-group-item text-muted">Danh sách yêu thích của bạn đang trống.</li>';
       return;
